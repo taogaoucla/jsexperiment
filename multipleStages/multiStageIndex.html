@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game with Two Stages</title>
+    <style>
+        .hidden { display: none; }
+        .stage { margin-top: 20px; }
+    </style>
+     <style>
+        /* Additional styles here */
+        #continueButton {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: block;
+        }
+    <style>
+</head>
+<body>
+    <div id="instructionsStage" class="stage">
+        <button id="prevButton">Previous</button>
+        <button id="nextButton">Next</button>
+    </div>
+    <div id="targetStage" class="stage hidden">
+        <canvas id="myCanvas" width="400" height="300" style="border: 1px solid black;"></canvas>
+        <button id="continueButton">Continue</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.5.5/rxjs.umd.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
+

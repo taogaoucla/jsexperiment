@@ -4,11 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas Drawing</title>
+     <style>
+        /* Additional styles here */
+        #continueButton {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: block;
+        }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.5.5/rxjs.umd.min.js"></script>
 </head>
 <body>
     <canvas id="myCanvas" width="800" height="600" style="border:1px solid #ccc;"></canvas>
-
+    <button id="continueButton">Continue</button>
     <script src="script.js"></script>
 </body>
 </html>

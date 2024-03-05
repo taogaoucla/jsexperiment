@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas Drawing</title>
-     <style>
+    <style>
         /* Additional styles here */
         #continueButton {
             position: absolute;
@@ -13,15 +13,21 @@
             transform: translateX(-50%);
             display: block;
         }
+        .hidden { display: none; }
+        .stage { margin-top: 20px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.5.5/rxjs.umd.min.js"></script>
 </head>
 <body>
-    <div id="instructionsContainer">Page content will appear here</div>
-    <button id="prevButton">Previous</button>
-    <button id="nextButton">Next</button>
-    <canvas id="myCanvas" width="800" height="600" style="border:1px solid #ccc;"></canvas>
-    <button id="continueButton">Continue</button>
+    <div id="instructionsStage" class="stage">
+        <div id="instructionsContainer">Page content will appear here</div>
+        <button id="prevButton">Previous</button>
+        <button id="nextButton">Next</button>
+    </div>
+    <div id="itemSelectionStage" class="stage hidden">
+        <canvas id="myCanvas" width="400" height="300" style="border: 1px solid black;"></canvas>
+        <button id="continueButton">Continue</button>
+    </div>
     <script src="multiStagesScript.js"></script>
 </body>
 </html>

@@ -1,8 +1,15 @@
 const { of, fromEvent, Subscription, Subject, concatMap, interval } = rxjs;
 const { scan, startWith, map, merge, withLatestFrom, filter, take } = rxjs.operators;
 
+// Transition Control
+function transitionToStage(stageId) {
+    document.querySelectorAll('.stage').forEach(stage => stage.classList.add('hidden'));
+    document.getElementById(stageId).classList.remove('hidden');
+}
+
 class InstructionStage {
     constructor(){
+       this.name = 'instructionsStage';
        this.instructionPages= [
       'Instruction Page 1: ...',
       'Instruction Page 2: ...',
@@ -17,6 +24,7 @@ class InstructionStage {
 
     run()
     {
+        transitionToStage(this.name);
         this.prevButton = document.getElementById('prevButton');
         this.nextButton = document.getElementById('nextButton');
         // Create observables for the Prev and Next button clicks
@@ -107,6 +115,7 @@ class Item {
 
 class World {
   constructor(canvasId) {
+    this.name = 'itemSelectionStage';
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext('2d');
     this.items = [];
@@ -136,6 +145,7 @@ render(hoveredItemId, clickedItemId) {
   }
 
 run(){
+    transitionToStage(this.name);
     const mousePosition$ = fromEvent(document, 'mousemove').pipe(
         map(event => ({ x: event.clientX, y: event.clientY })),
     );
@@ -206,7 +216,6 @@ function getHoveredItem(items, mousePos) {
   const hoveredId = items.findIndex(item => item.isHovered(mousePos.x, mousePos.y));
   return hoveredId >= 0 ? hoveredId : null;
 }
-
 // Main execution function
 function main() {
     const instructionOne = new InstructionStage();

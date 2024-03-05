@@ -1,74 +1,79 @@
 const { of, fromEvent, Subscription, Subject, concatMap, interval } = rxjs;
-const { scan, startWith, map, merge, withLatestFrom, filter, take } = rxjs.operators;
+const {tap, scan, startWith, map, merge, withLatestFrom, filter, take } = rxjs.operators;
 
-// Transition Control
-function transitionToStage(stageId) {
+class PhaseBlock {
+  constructor(name){
+    this.name = name;
+    this.subscriptions = new Subscription();
+  };
+
+  showOnlyCurrentPhase() {
     document.querySelectorAll('.stage').forEach(stage => stage.classList.add('hidden'));
-    document.getElementById(stageId).classList.remove('hidden');
+    document.getElementById(this.name).classList.remove('hidden');
+  }
+
+  run(){
+    this.showOnlyCurrentPhase();
+  }
+
+  cleanup(){
+    this.subscriptions.unsubscribe();
+  }
 }
 
-class InstructionStage {
-    constructor(){
-       this.name = 'instructionsStage';
-       this.instructionPages= [
+class InstructionPhase extends PhaseBlock{
+  constructor(){
+    super('instructionsStage');
+    this.pages = [
       'Instruction Page 1: ...',
       'Instruction Page 2: ...',
       'Instruction Page 3: ...',
-      // Add more instruction pages as needed
-        ];
-    this.subscriptions = new Subscription();
-    this.stageCompleted = new Subject();
-
+    ];
     this.instructionsContainer = document.getElementById('instructionsContainer');
-    }
+  }
 
-    run()
-    {
-        transitionToStage(this.name);
-        this.prevButton = document.getElementById('prevButton');
-        this.nextButton = document.getElementById('nextButton');
-        // Create observables for the Prev and Next button clicks
-        const prevButtonClick$ = fromEvent(this.prevButton, 'click').pipe(map(() => -1));
-        const nextButtonClick$ = fromEvent(this.nextButton, 'click').pipe(map(() => 1));
+  run(){
+    super.run();
+    let prevButton = document.getElementById('prevButton');
+    let nextButton = document.getElementById('nextButton');
+    // Create observables for the Prev and Next button clicks
+    const prevButtonClick$ = fromEvent(prevButton, 'click').pipe(map(() => -1));
+    const nextButtonClick$ = fromEvent(nextButton, 'click').pipe(map(() => 1));
 
-        // Combine both observables to manage the current page index
-        const pageIndex$ = rxjs.merge(prevButtonClick$, nextButtonClick$).pipe(
-          scan((acc, curr) => {
-            let newIndex = acc + curr;
-            // Prevent going out of bounds
-            return Math.max(Math.min(newIndex, this.instructionPages.length - 1), 0);
-          }, 0),
-          startWith(0) // Start with the first page
-        );
+    // Combine both observables to manage the current page index
+    const pageIndex$ = rxjs.merge(prevButtonClick$, nextButtonClick$).pipe(
+      scan((acc, curr) => {
+        let newIndex = acc + curr;
+        // Prevent going out of bounds
+        return Math.max(Math.min(newIndex, this.pages.length - 1), 0);
+      }, 0),
+      startWith(0) // Start with the first page
+    );
 
-        // Subscribe to pageIndex$ to update the instructions container content
-        const showInstruction=pageIndex$.subscribe(index => {
-          this.instructionsContainer.textContent = this.instructionPages[index];
-        });
+    // Subscribe to pageIndex$ to update the instructions container content
+    const showInstruction=pageIndex$.subscribe(index => {
+      this.instructionsContainer.textContent = this.pages[index];
+    });
 
-        this.subscriptions.add(showInstruction);
+    this.subscriptions.add(showInstruction);
 
-        const stageRunning$ = nextButtonClick$.pipe(
-            withLatestFrom(pageIndex$),
-            filter(([_, pageIndex]) => pageIndex==this.instructionPages.length-1),
-            take(1)
-        );
+    const stageRunning$ = nextButtonClick$.pipe(
+        withLatestFrom(pageIndex$),
+        filter(([_, pageIndex]) => pageIndex==this.pages.length-1),
+        take(1)
+    );
 
-        const endStageSubscription = stageRunning$.subscribe({
-            complete: () => {
-            console.log("Last instruction page. Proceeding to cleanup");
-            this.cleanup()
-        }});
+    const endStageSubscription = stageRunning$.subscribe({
+        complete: () => {
+        console.log("Last instruction page. Proceeding to cleanup");
+        this.cleanup()
+    }});
 
-        this.subscriptions.add(endStageSubscription);
+    this.subscriptions.add(endStageSubscription);
 
-        return stageRunning$;
+    return stageRunning$;
+  }
 
-        }
-cleanup(){
-    console.log("running cleaning up");
-    this.subscriptions.unsubscribe();
-}
 }
 
 class Item {
@@ -113,41 +118,36 @@ class Item {
 
 }
 
-class World {
-  constructor(canvasId) {
-    this.name = 'itemSelectionStage';
+class ItemSelectionPhase extends PhaseBlock{
+  constructor (canvasId){
+    super('itemSelectionStage');
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext('2d');
     this.items = [];
     this.continueButton = document.getElementById('continueButton')
-    this.subscriptions = new Subscription()
   }
 
-addItem(itemOrItems) {
-    if (Array.isArray(itemOrItems)) {
-        this.items = this.items.concat(itemOrItems);
-    } else {
-        this.items.push(itemOrItems);
-    }
-}
+  addItems(items) {
+    this.items = this.items.concat(items);
+  }
 
-clearDisplay(){
+  clearCanvas(){
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear canvas
-}
-
-render(hoveredItemId, clickedItemId) {
-    this.clearDisplay();
-    this.items.forEach((item, index) => {
-      const isHovered = index === hoveredItemId;
-      const isClicked = index === clickedItemId;
-      item.render(this.ctx, isHovered, isClicked);
-    });
   }
 
-run(){
-    transitionToStage(this.name);
+  render(hoveredItemId, clickedItemId) {
+      this.clearCanvas();
+      this.items.forEach((item, index) => {
+        const isHovered = index === hoveredItemId;
+        const isClicked = index === clickedItemId;
+        item.render(this.ctx, isHovered, isClicked);
+      });
+    }
+  
+  run(){
+    super.run();
     const mousePosition$ = fromEvent(document, 'mousemove').pipe(
-        map(event => ({ x: event.clientX, y: event.clientY })),
+        map(event => ({ x: event.clientX, y: event.clientY})),
     );
 
     const mouseClick$ = fromEvent(document, 'click');
@@ -182,15 +182,15 @@ run(){
     );
 
     const canvasRenderSubscription=canvasUpdate$.subscribe(({hoveredItemId, clickedItemId}) => {
-     this.render(hoveredItemId, clickedItemId);
-});
-     this.subscriptions.add(canvasRenderSubscription);
+    this.render(hoveredItemId, clickedItemId);
+    });
+    this.subscriptions.add(canvasRenderSubscription);
 
     const running$=continueButtonClick$.pipe(
         withLatestFrom(clickOnHoveredItem$),
         filter(([_, clickedItemId]) => clickedItemId !== null),
         take(1)
-     );
+    );
 
     const endSubscription = running$.subscribe({
         complete: () =>{
@@ -200,14 +200,14 @@ run(){
 
     this.subscriptions.add(endSubscription);
     return running$;
-}
-
-    cleanup(){
-        console.log("cleaning up the item click world!");
-        this.clearDisplay();
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear canvas
-        this.subscriptions.unsubscribe();
-    };
+  }
+  cleanup(){
+    super.cleanup();
+    this.subscriptions.unsubscribe();
+    console.log("cleaning up the item click world!");
+    this.clearDisplay();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear canvas
+  };
 }
 
 function getHoveredItem(items, mousePos) {
@@ -218,21 +218,20 @@ function getHoveredItem(items, mousePos) {
 }
 // Main execution function
 function main() {
-    const instructionOne = new InstructionStage();
-    const instructionTwo = new InstructionStage();
-
-    const world = new World('myCanvas');
+    const instructionOne = new InstructionPhase();
+    const instructionTwo = new InstructionPhase();
+    const world = new ItemSelectionPhase('myCanvas');
     const items = [
     new Item(100, 100, 30, 'circle', 'red'),
     new Item(200, 100, 40, 'square', 'blue'),
     new Item(300, 150, 50, 'circle', 'green'),
     new Item(400, 200, 60, 'square', 'purple'),
     ];
-    world.addItem(items);
+    world.addItems(items);
 
-    const allStages = of(instructionOne, world, instructionTwo);
+    const allStages = of(instructionOne, world,instructionTwo);
 
-    runningAllStage$ = allStages.pipe(
+    const runningAllStage$ = allStages.pipe(
         concatMap(stage => stage.run())
     );
 

@@ -8,7 +8,7 @@
         /* Additional styles here */
         #continueButton {
             position: absolute;
-            bottom: 20px;
+            bottom: 20%;
             left: 50%;
             transform: translateX(-50%);
             display: block;
@@ -17,17 +17,18 @@
         .stage { margin-top: 20px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.5.5/rxjs.umd.min.js"></script>
-</head>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script> </head>
 <body>
-    <div id="instructionsStage" class="stage">
+    <div id="instructionPhase" class="stage">
         <div id="instructionsContainer">Page content will appear here</div>
         <button id="prevButton">Previous</button>
         <button id="nextButton">Next</button>
     </div>
-    <div id="itemSelectionStage" class="stage hidden">
-        <canvas id="myCanvas" width="400" height="300" style="border: 1px solid black;"></canvas>
+    <div id="itemSelectionPhase" class="stage hidden">
+        <canvas id="myCanvas" width="600" height="400" style="border: 1px solid black;"></canvas>
         <button id="continueButton">Continue</button>
     </div>
+    <script src="experiment.js"></script>
     <script src="multiStagesScript.js"></script>
 </body>
 </html>

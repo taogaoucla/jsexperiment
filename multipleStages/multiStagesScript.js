@@ -1,6 +1,7 @@
 const { of, fromEvent, Subscription, Subject, concatMap, interval } = rxjs;
 const {tap, scan, startWith, map, merge, withLatestFrom, filter, take } = rxjs.operators;
 
+
 class PhaseBlock {
   constructor(name){
     this.name = name;
@@ -21,9 +22,10 @@ class PhaseBlock {
   }
 }
 
+
 class InstructionPhase extends PhaseBlock{
   constructor(){
-    super('instructionsStage');
+    super('instructionPhase');
     this.pages = [
       'Instruction Page 1: ...',
       'Instruction Page 2: ...',
@@ -63,13 +65,13 @@ class InstructionPhase extends PhaseBlock{
         take(1)
     );
 
-    const endStageSubscription = stageRunning$.subscribe({
+    const endPhaseSubscription = stageRunning$.subscribe({
         complete: () => {
         console.log("Last instruction page. Proceeding to cleanup");
         this.cleanup()
     }});
 
-    this.subscriptions.add(endStageSubscription);
+    this.subscriptions.add(endPhaseSubscription);
 
     return stageRunning$;
   }
@@ -77,14 +79,16 @@ class InstructionPhase extends PhaseBlock{
 }
 
 class Item {
-  constructor(x, y, size, shape, color) {
-    this.x = x;
-    this.y = y;
-    this.size = size; //for circle, the size is the diameter
+  constructor(shape, color) {
+    this.size = 30; //for circle, the size is the diameter
     this.shape = shape;
     this.color = color;
   }
 
+  setPosition(x, y){
+    this.x=x;
+    this.y=y;
+  }
 
 // Check if the item is being hovered over
   isHovered(mouseX, mouseY) {
@@ -118,9 +122,30 @@ class Item {
 
 }
 
+function createRandomPoint(canvasWidth, canvasHeight) {
+  const x = Math.random() * canvasWidth;
+  const y = Math.random() * canvasHeight;
+  return [x, y]
+}
+
+function isFarEnough(newPoint, existingPoints, minDistance) {
+  return existingPoints.every(point => 
+    Math.sqrt(Math.pow(point.x - newPoint.x, 2) + Math.pow(point.y - newPoint.y, 2)) > minDistance
+  );
+}
+
+function samplePositions(ctx, numSamples) {
+  const points = [];
+  while (points.length < numSamples) {
+    const newPoint = createRandomPoint(ctx.canvas.width, ctx.canvas.height);
+    points.push(newPoint);
+  }
+  return points;
+}
+
 class ItemSelectionPhase extends PhaseBlock{
   constructor (canvasId){
-    super('itemSelectionStage');
+    super('itemSelectionPhase');
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext('2d');
     this.items = [];
@@ -129,7 +154,16 @@ class ItemSelectionPhase extends PhaseBlock{
 
   addItems(items) {
     this.items = this.items.concat(items);
+    this.setItemPositions();
   }
+
+  setItemPositions(){
+    const itemsPositions = samplePositions(this.ctx, this.items.length);
+    itemsPositions.forEach((position, index) => {
+      this.items[index].setPosition(...position);
+    });
+  } 
+  
 
   clearCanvas(){
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear canvas
@@ -205,7 +239,7 @@ class ItemSelectionPhase extends PhaseBlock{
     super.cleanup();
     this.subscriptions.unsubscribe();
     console.log("cleaning up the item click world!");
-    this.clearDisplay();
+    this.clearCanvas();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Clear canvas
   };
 }
@@ -217,26 +251,45 @@ function getHoveredItem(items, mousePos) {
   return hoveredId >= 0 ? hoveredId : null;
 }
 // Main execution function
-function main() {
-    const instructionOne = new InstructionPhase();
-    const instructionTwo = new InstructionPhase();
-    const world = new ItemSelectionPhase('myCanvas');
-    const items = [
-    new Item(100, 100, 30, 'circle', 'red'),
-    new Item(200, 100, 40, 'square', 'blue'),
-    new Item(300, 150, 50, 'circle', 'green'),
-    new Item(400, 200, 60, 'square', 'purple'),
-    ];
-    world.addItems(items);
+class NumberShapeColorTrial extends Trial{
+  constructor(condition){
+    super(condition);
+    this.itemSelectionPhase = new ItemSelectionPhase("myCanvas");
+    this.instructionPhase = new InstructionPhase();
+    this.generateStimuli();
+    this.allPhases = of(this.instructionPhase, this.itemSelectionPhase)
+  }
 
-    const allStages = of(instructionOne, world,instructionTwo);
+  generateStimuli(){
+    const setSize = this.condition.setSize;
+    // const color = this.condition.color;
+    const shape = this.condition.shape;
+    const items = Array.from({length: setSize}, () => new Item(shape, "red"));
+    this.itemSelectionPhase.addItems(items)
+  }
 
-    const runningAllStage$ = allStages.pipe(
+  run(){
+    // const allPhases = of(this.instructionPhase, this.itemSelectionPhase, this.instructionTwo);
+    const runningAllPhase$ = this.allPhases.pipe(
         concatMap(stage => stage.run())
     );
+    runningAllPhase$.subscribe({
+      next: value => console.log("moving to the next stage"),
+      complete: () => console.log("trail end !")
+    })
+    return runningAllPhase$;
+  }
+}
+function main() {
 
-    runningAllStage$.subscribe(value => console.log("moving to the next stage"));
-
+manipulations=[
+    {name:'setSize', levels:[2, 4, 8]},
+    {name:'shape', levels:['circle', 'square']},
+]
+numberPerCondition = 2;
+let experiment = new Experiment(NumberShapeColorTrial, manipulations, numberPerCondition);
+experiment.run()
+  
 }
 // Execute main function when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', main);
